@@ -13,15 +13,14 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+from __future__ import annotations
 from string import ascii_letters, digits
 from io import BufferedReader, BytesIO, SEEK_END, SEEK_SET
 from mimetypes import guess_type
 from pathlib import Path
 from random import choice
-from typing import Optional, Union
 
 from boto3 import client
-from boto3.session import Session
 from bs4 import BeautifulSoup
 from aiohttp import ClientSession, FormData, StreamReader
 from aiohttp.hdrs import USER_AGENT
@@ -30,11 +29,14 @@ from . import default_user_agent
 
 
 def _client_session_setup(
-    session: ClientSession,
-    user_agent: Optional[str] = None,
+    session: ClientSession | None = None,
+    user_agent: str | None = None,
 ):
     """Method to setup or create a HTTP client session with proper user-agent
     """
+    if session is None:
+        session = ClientSession()
+
     if USER_AGENT not in session.headers:
         if user_agent is None:
             session.headers[USER_AGENT] = default_user_agent
@@ -51,9 +53,14 @@ class Imgur:
     client_id = "546c25a59c58ad7"
 
     def __init__(
-        self, session: ClientSession, user_agent: Optional[str] = None,
+        self,
+        session: ClientSession | None = None,
+        user_agent: str | None = None,
     ):
-        self.__session = _client_session_setup(session, user_agent=user_agent)
+        self.__session = _client_session_setup(
+            session=session,
+            user_agent=user_agent,
+        )
 
     async def generate_album(self):
         return await self.__session.post(
@@ -93,7 +100,7 @@ class Imgur:
 
     async def upload_media(
         self,
-        media_content: Union[BufferedReader, BytesIO, StreamReader],
+        media_content: BufferedReader | BytesIO | StreamReader,
         media_filename: str,
     ):
         if not media_filename.endswith((".mp4")):
@@ -158,7 +165,7 @@ class Imgur:
     async def check_captcha(
         self,
         total_upload: int,
-        g_recaptcha_response: Optional[str] = None,
+        g_recaptcha_response: str | None = None,
     ):
         return await self.__session.post(
             f"{Imgur.api_url}/3/upload/checkcaptcha",
@@ -175,10 +182,11 @@ class JustStreamLive:
 
     def __init__(
         self,
-        session: ClientSession, user_agent: Optional[str] = None,
+        session: ClientSession | None = None,
+        user_agent: str | None = None,
     ):
         self.__session = _client_session_setup(
-            session,
+            session=session,
             user_agent=user_agent,
         )
 
@@ -189,7 +197,7 @@ class JustStreamLive:
 
     async def upload_video(
         self,
-        video_content: Union[BytesIO, BufferedReader, StreamReader],
+        video_content: BytesIO | BufferedReader | StreamReader,
         video_filename: str,
     ):
         form_data = FormData()
@@ -224,7 +232,7 @@ class JustStreamLive:
         self,
         video_id: str,
         mirror_filename: str = "Mirror.mp4",
-        streamff_client: Optional["Streamff"] = None,
+        streamff_client: Streamff | None = None,
     ):
         if streamff_client is None:
             streamff_client = Streamff(self.__session)
@@ -244,11 +252,11 @@ class Streamable:
 
     def __init__(
         self,
-        session: ClientSession,
-        user_agent: Optional[str] = None,
+        session: ClientSession | None = None,
+        user_agent: str | None = None,
     ):
         self.__session = _client_session_setup(
-            session,
+            session=session,
             user_agent=user_agent,
         )
 
@@ -355,7 +363,7 @@ class Streamable:
         video_shortcode: str,
         video_filename: str,
         video_size: int,
-        video_title: Optional[str] = None,
+        video_title: str | None = None,
     ):
         return await self.__session.put(
             f"{Streamable.api_url}/videos/{video_shortcode}",
@@ -375,7 +383,7 @@ class Streamable:
     async def upload_from_file(
         self,
         video_path: Path,
-        video_title: Optional[str] = None,
+        video_title: str | None = None,
     ):
         return await self.upload_video(
             video_path.open(mode="rb"),
@@ -385,9 +393,9 @@ class Streamable:
 
     async def upload_video(
         self,
-        video_content: Union[BytesIO, BufferedReader],
+        video_content: BytesIO | BufferedReader,
         video_filename: str,
-        video_title: Optional[str] = None,
+        video_title: str | None = None,
     ):
         video_content.seek(0, SEEK_END)
         video_sz = video_content.tell()
@@ -670,11 +678,11 @@ class Streamja:
 
     def __init__(
         self,
-        session: ClientSession,
-        user_agent: Optional[str] = None,
+        session: ClientSession | None = None,
+        user_agent: str | None = None,
     ):
         self.__session = _client_session_setup(
-            session,
+            session=session,
             user_agent=user_agent,
         )
 
@@ -691,7 +699,7 @@ class Streamja:
 
     async def upload_video(
         self,
-        video_content: Union[BytesIO, BufferedReader, StreamReader],
+        video_content: BytesIO | BufferedReader | StreamReader,
         video_filename: str,
     ):
         res = await self.generate_upload_shortcode()
@@ -732,11 +740,11 @@ class Streamwo:
 
     def __init__(
         self,
-        session: Session,
-        user_agent: Optional[str] = None,
+        session: ClientSession | None = None,
+        user_agent: str | None = None,
     ):
         self.__session = _client_session_setup(
-            session,
+            session=session,
             user_agent=user_agent,
         )
 
@@ -752,7 +760,7 @@ class Streamwo:
 
     async def upload_video(
         self,
-        video_content: Union[BytesIO, BufferedReader, StreamReader],
+        video_content: BytesIO | BufferedReader | StreamReader,
         video_filename: str,
     ):
         form_data = FormData()
@@ -791,8 +799,8 @@ class Streamff:
 
     def __init__(
         self,
-        session: ClientSession,
-        user_agent: Optional[str] = None,
+        session: ClientSession | None = None,
+        user_agent: str | None = None,
     ):
         self.__session = _client_session_setup(
             session,
@@ -811,7 +819,7 @@ class Streamff:
 
     async def upload_video(
         self,
-        video_content: Union[BytesIO, BufferedReader, StreamReader],
+        video_content: BytesIO | BufferedReader | StreamReader,
         video_filename: str,
     ):
         res = await self.generate_link()
